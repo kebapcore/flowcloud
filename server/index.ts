@@ -1,9 +1,15 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 
 const app = express();
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-access-key"]
+}));
 const httpServer = createServer(app);
 
 declare module "http" {
@@ -77,6 +83,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  const { runMigrations } = await import("./db");
+  await runMigrations();
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
