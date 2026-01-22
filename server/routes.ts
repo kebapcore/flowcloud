@@ -22,24 +22,50 @@ export async function registerRoutes(
     }
   };
 
-  // Serve specific file by name
-  app.get("/api/files/path/:file", checkAuth, async (req, res) => {
-    try {
-      const { file } = req.params;
-      const path = await import("path");
-      const fs = await import("fs/promises");
-      
-      // Render-compatible path using process.cwd()
-      const filePath = path.join(process.cwd(), "client", "public", "src", "files", file);
+  // Dynamic path access
+  app.get(/^\/api\/files\/path(?:\/(.*))?$/, checkAuth, async (req: any, res: any) => {
+    // req.params[0] will be the captured path after /api/files/path/
+    const filePathParam = req.params[0] || "";
+    const fullPath = "/" + filePathParam;
+    const fileName = filePathParam.split('/').pop();
 
+    let file = await storage.getFileByPath(fullPath);
+    
+    const path = await import("path");
+    const fs = await import("fs/promises");
+
+    if (!file) {
+      const filePath = path.join(process.cwd(), "client", "public", "src", "files", fileName || "");
+      
       try {
-        await fs.access(filePath);
-        res.sendFile(filePath);
+        const stats = await fs.stat(filePath);
+        file = {
+          id: 0,
+          name: fileName || "unknown",
+          type: 'file',
+          size: `${(stats.size / 1024).toFixed(1)} KB`,
+          parentId: null,
+          path: fullPath,
+          accessKey: null
+        };
       } catch (err) {
-        res.status(404).json({ message: `File not found: ${file}` });
+        return res.status(404).json({ message: "File not found" });
       }
-    } catch (err) {
-      res.status(500).json({ message: "Internal Server Error" });
+    }
+    
+    if (file.type === 'folder') {
+      const children = await storage.getFiles(file.id);
+      res.json(children);
+    } else {
+      if (!file.accessKey) {
+        const crypto = await import("crypto");
+        const key = crypto.randomBytes(10).toString('hex');
+        if (file.id !== 0) {
+          await storage.updateFile(file.id, { accessKey: key });
+        }
+        file.accessKey = key;
+      }
+      res.json(file);
     }
   });
 
@@ -62,31 +88,6 @@ export async function registerRoutes(
     const parentId = req.query.parentId ? Number(req.query.parentId) : undefined;
     const files = await storage.getFiles(parentId);
     res.json(files);
-  });
-
-  // Dynamic path access
-  app.get(/^\/api\/files\/path(?:\/(.*))?$/, checkAuth, async (req: any, res: any) => {
-    // req.params[0] will be the captured path after /api/files/path/
-    const fullPath = req.params[0] ? `/${req.params[0]}` : "/";
-    
-    const file = await storage.getFileByPath(fullPath);
-    if (!file) {
-      return res.status(404).send("");
-    }
-    
-    if (file.type === 'folder') {
-      const children = await storage.getFiles(file.id);
-      res.json(children);
-    } else {
-      // Generate 20-character access key if it doesn't exist
-      if (!file.accessKey) {
-        const crypto = await import("crypto");
-        const key = crypto.randomBytes(10).toString('hex');
-        await storage.updateFile(file.id, { accessKey: key });
-        file.accessKey = key;
-      }
-      res.json(file);
-    }
   });
 
   // Public File Access /files/filename.txt?key=KEY
@@ -136,9 +137,6 @@ export async function registerRoutes(
   // Sync with physical files on startup
   await syncPhysicalFiles();
   
-  // Seed database (only if sync didn't find anything)
-  // await seedDatabase();
-
   return httpServer;
 }
 
@@ -178,52 +176,5 @@ async function syncPhysicalFiles() {
     }
   } catch (err) {
     console.error("Failed to sync physical files:", err);
-  }
-}
-
-async function seedDatabase() {
-  const existingFiles = await storage.getFiles();
-  if (existingFiles.length === 0) {
-    console.log("Seeding database...");
-    
-    // Create folders
-    const projectFolder = await storage.createFile({
-      name: "Project Alpha",
-      type: "folder",
-      size: "--",
-      parentId: null
-    });
-
-    await storage.createFile({
-      name: "Personal",
-      type: "folder",
-      size: "--",
-      parentId: null
-    });
-
-    // Create files
-    await storage.createFile({
-      name: "resume.pdf",
-      type: "file",
-      size: "2.4 MB",
-      parentId: null
-    });
-
-    await storage.createFile({
-      name: "budget_2024.xlsx",
-      type: "file",
-      size: "1.1 MB",
-      parentId: null
-    });
-
-    // Nested file
-    await storage.createFile({
-      name: "specs_v1.docx",
-      type: "file",
-      size: "450 KB",
-      parentId: projectFolder.id
-    });
-    
-    console.log("Database seeded!");
   }
 }
