@@ -13,12 +13,35 @@ export async function registerRoutes(
   // Middleware to check access key
   const checkAuth = (req: any, res: any, next: any) => {
     const providedKey = req.headers['x-access-key'] || req.query.accessKey;
-    if (providedKey === ACCESS_KEY) {
+    const ACCESS_KEY = process.env.ACCESS_KEY;
+    
+    if (providedKey && providedKey === ACCESS_KEY) {
       next();
     } else {
-      res.status(401).send(""); // White screen / empty response
+      res.status(401).json({ message: "Unauthorized: Invalid or missing access key" });
     }
   };
+
+  // Serve specific file by name
+  app.get("/api/files/path/:file", checkAuth, async (req, res) => {
+    try {
+      const { file } = req.params;
+      const path = await import("path");
+      const fs = await import("fs/promises");
+      
+      // Render-compatible path using process.cwd()
+      const filePath = path.join(process.cwd(), "client", "public", "src", "files", file);
+
+      try {
+        await fs.access(filePath);
+        res.sendFile(filePath);
+      } catch (err) {
+        res.status(404).json({ message: `File not found: ${file}` });
+      }
+    } catch (err) {
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+  });
 
   // Auth Route
   app.post(api.auth.verify.path, (req, res) => {
