@@ -1,0 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-outfit: 'Outfit', sans-serif;
+
+  /* Color Palette - HSL Space Separated */
+  /* Deep Slate Blue - Background #2C3E50 -> 210 29% 24% */
+  /* Darker variants for depth */
+  --background: 210 29% 24%; 
+  --foreground: 210 40% 98%;
+
+  /* Cards/Surfaces - Slightly lighter blue/grey with opacity for glassmorphism */
+  --card: 210 29% 30%;
+  --card-foreground: 210 40% 98%;
+  
+  --popover: 210 29% 30%;
+  --popover-foreground: 210 40% 98%;
+
+  /* Vibrant Orange - #FF5722 -> 14 100% 57% */
+  --primary: 14 100% 57%;
+  --primary-foreground: 0 0% 100%;
+
+  /* Muted tones for secondary text */
+  --secondary: 210 20% 40%;
+  --secondary-foreground: 210 40% 90%;
+
+  --muted: 210 20% 35%;
+  --muted-foreground: 210 20% 70%;
+
+  --accent: 14 100% 65%; /* Lighter orange for hover */
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 210 20% 40%;
+  --input: 210 20% 35%;
+  --ring: 14 100% 57%;
+
+  --radius: 0.75rem;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground;
+    font-family: var(--font-outfit);
+    background-image: 
+      radial-gradient(at 0% 0%, hsla(210, 29%, 35%, 0.3) 0px, transparent 50%),
+      radial-gradient(at 100% 100%, hsla(14, 100%, 57%, 0.1) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-tight;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-card/60 backdrop-blur-xl border border-white/10 shadow-xl;
+  }
+  
+  .glass-button {
+    @apply bg-white/5 hover:bg-white/10 border border-white/10 text-white backdrop-blur-sm transition-all duration-300;
+  }
+}

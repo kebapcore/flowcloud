@@ -1,0 +1,174 @@
+# THE FLOWSCRIPT MANIFESTO: DOCUMENTATION & REFERENCE (v1.0-STABLE)
+
+This document defines the official syntax, logic, and standard library for **FlowScript**, the automation language of the Flowstate CreativeOS.
+
+---
+
+## 1. CORE PHILOSOPHY & SYNTAX
+
+*   **No Indentation Rules:** FlowScript ignores indentation. Code structure is defined strictly by `start [Block]` and `end [Block]` commands.
+*   **Declarative:** Commands are simple, English-like instructions.
+*   **Case-Insensitive Blocks:** `start prompt`, `START PROMPT`, `Start Prompt` are treated the same (though `start Prompt` is convention).
+*   **Variable Injection:** Variables are enclosed in square brackets `[variable_name]`. The engine automatically injects their values as strings.
+
+---
+
+## 2. BLOCK STRUCTURE (THE LIFECYCLE)
+
+Every script MUST be wrapped in `start flowstate` ... `end flowstate`. Inside, the execution flows sequentially through three phases:
+
+### Phase 1: Preparation (`beforePrompt`)
+*   **Purpose:** Gather data, set up agents, fetch API info BEFORE the main AI task.
+*   **Commands:** `start beforePrompt` ... `end beforePrompt`
+*   **Shortcut:** `pass beforePrompt` (if empty).
+
+### Phase 2: Execution (`Prompt` or `overridePrompt`)
+*   **Purpose:** The main event. Generates the primary output displayed to the user.
+*   **Option A: `start Prompt` ... `end Prompt`**
+    *   Sends the text inside to the Default AI. Result is stored in `[answer]`.
+*   **Option B: `start overridePrompt` ... `end overridePrompt`**
+    *   Bypasses the Default AI. The text inside becomes the final output. Used for pure automations.
+*   **Shortcut:** `pass Prompt` (skips this phase entirely).
+
+### Phase 3: Side Effects (`afterPrompt`)
+*   **Purpose:** Actions to take AFTER the result is ready. Saving files, updating notes, changing music.
+*   **Commands:** `start afterPrompt` ... `end afterPrompt`
+*   **Shortcut:** `pass afterPrompt` (if empty).
+
+---
+
+## 3. COMMAND REFERENCE (THE STANDARD LIBRARY)
+
+### A. Flowstate OS Interactions
+*   `log("Message")` -> Displays a temporary status chip (like "Downloading...") in the chat.
+*   `createNote(title="...", content="...")` -> Creates a new note in the right panel.
+*   `getNote("Title")` -> Reads a note's content. Use `getOutput` to capture it.
+*   `updateNote("Title", "New Content")` -> Overwrites an existing note.
+*   `deleteNote("Title")` -> Deletes a note.
+*   `saveFile(name="...", url="...")` -> Saves a file from a URL to the "Files" panel.
+*   `getFile("Name")` -> Reads file info.
+*   `changeMusic(mood="focus")` -> Changes background music. Moods: `creative`, `romantic`, `sad`, `energetic`, `calm`, `focus`.
+*   `updatePlan(task="...", status="done")` -> Updates a task in the Plan panel.
+
+### B. AI Agent System
+*   `flow expand` -> **REQUIRED** at the top of the script to enable Agent commands.
+*   `createAI("System Instruction")` -> Spawns a new temporary AI agent.
+*   `setID as "AGENT_NAME"` -> Names the last created agent.
+*   `runAI as AGENT_NAME("Prompt...")` -> Executes a task with the specific agent.
+*   `runAI("Prompt...", engine="image")` -> Runs a generic task (e.g., image generation).
+
+### C. Advanced Code Execution (Python)
+*   `execute(...)` -> Runs Python 3 code in a sandboxed environment (Pyodide).
+*   **Crucial Rule:** Do NOT use `return` at the top level. The engine automatically wraps your code in an `async def main():` block. You just write the logic and `return` the result.
+*   **Variable Access:** To use FlowScript variables inside Python, use the injected `fs` library:
+    *   `val = fs.get_input("variable_name")` (Best practice).
+    *   Direct injection `"[variable_name]"` works but requires careful string escaping.
+
+### D. Data Handling
+*   `getOutput as "var_name"` -> Captures the result of the previous command (`execute`, `runAI`, `getNote`) into a variable.
+
+---
+
+## 4. BUG FIXES & BEST PRACTICES (FOR THE AI ENGINE)
+
+### Fix 1: The "Return Outside Function" Error
+**Solution:** The Engine MUST wrap user Python code before execution.
+*   *User writes:* `return "Hello"`
+*   *Engine executes:* `async def main(): return "Hello"; await main()`
+
+### Fix 2: Error Handling
+**Solution:** If any command fails (e.g., API timeout in `execute`), the Engine must:
+1.  Stop the script immediately ("Fail-Fast").
+2.  Display a red error bubble in the chat.
+3.  NOT execute the subsequent blocks (`afterPrompt`).
+
+### Fix 3: Logic Order
+**Solution:** NEVER put `overridePrompt` inside or after `afterPrompt`. It belongs in the middle phase.
+
+---
+
+## 5. EXAMPLE LIBRARY (COOKBOOK)
+
+### Example 1: The "Research & Summarize" Bot
+*Downloads a webpage content via Python, summarizes it with AI, saves to notes.*
+
+```coffeescript
+start flowstate
+  pass Prompt
+  
+  start afterPrompt
+    log("Fetching article content...")
+    execute(
+      import requests
+      # Use fs.get_input for safety
+      url = fs.get_input("prompt") 
+      return requests.get(url).text[:5000] # Get first 5000 chars
+    , inputs=["prompt"])
+    getOutput as "raw_content"
+    
+    log("Summarizing with AI...")
+    runAI("Summarize this text in 3 bullet points: [raw_content]")
+    getOutput as "summary"
+    
+    createNote(title="Article Summary", content="[summary]")
+    
+    start overridePrompt
+      Summary created and saved to your notes! 📝
+    end overridePrompt
+  end afterPrompt
+end flowstate
+```
+
+### Example 2: The "Debate Team" (Multi-Agent)
+*Creates two opposing AI agents to debate a user's topic.*
+
+```coffeescript
+flow expand
+start flowstate
+  start beforePrompt
+    createAI("You are an Optimist.")
+    setID as "OPT"
+    createAI("You are a Pessimist.")
+    setID as "PES"
+    
+    runAI as OPT("What is good about: [prompt]?")
+    getOutput as "good_point"
+    
+    runAI as PES("What is bad about: [prompt]?")
+    getOutput as "bad_point"
+  end beforePrompt
+
+  start Prompt
+    Here is a balanced view on "[prompt]":
+    
+    ✅ PRO: [good_point]
+    ❌ CON: [bad_point]
+  end Prompt
+end flowstate
+```
+
+### Example 3: The "Asset Downloader" (Pure Automation)
+*Takes a URL, extracts filename, saves to Files.*
+
+```coffeescript
+start flowstate
+  pass Prompt
+  
+  start afterPrompt
+    log("Analyzing URL...")
+    execute(
+      import os
+      from urllib.parse import urlparse
+      path = urlparse(fs.get_input("prompt")).path
+      return os.path.basename(path) or "downloaded_file"
+    , inputs=["prompt"])
+    getOutput as "filename"
+    
+    saveFile(name="[filename]", url="[prompt]")
+    
+    start overridePrompt
+      Saved "[filename]" to your Files panel.
+    end overridePrompt
+  end afterPrompt
+end flowstate
+```
