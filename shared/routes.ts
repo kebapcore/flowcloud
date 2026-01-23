@@ -1,62 +1,21 @@
-import { z } from 'zod';
-import { insertFileSchema, files } from './schema';
-
-export const errorSchemas = {
-  validation: z.object({
-    message: z.string(),
-  }),
-  unauthorized: z.object({
-    message: z.string(),
-  }),
-  notFound: z.object({
-    message: z.string(),
-  }),
-};
+import { z } from "zod";
+import { fileMetadataSchema } from "./schema";
 
 export const api = {
-  auth: {
-    verify: {
-      method: 'POST' as const,
-      path: '/api/auth/verify',
-      input: z.object({ accessKey: z.string() }),
-      responses: {
-        200: z.object({ success: z.boolean() }),
-        401: errorSchemas.unauthorized,
-      },
-    },
-  },
   files: {
-    list: {
-      method: 'GET' as const,
-      path: '/api/files',
-      input: z.object({ 
-        parentId: z.string().optional(),
-        accessKey: z.string().optional() 
-      }).optional(),
+    metadata: {
+      method: "GET" as const,
+      path: "/api/files/:path", // Use standard param instead of wildcard string
       responses: {
-        200: z.array(z.custom<typeof files.$inferSelect>()),
-      },
-    },
-    create: {
-      method: 'POST' as const,
-      path: '/api/files',
-      input: insertFileSchema,
-      responses: {
-        201: z.custom<typeof files.$inferSelect>(),
-        400: errorSchemas.validation,
-      },
-    },
-    delete: {
-      method: 'DELETE' as const,
-      path: '/api/files/:id',
-      responses: {
-        204: z.void(),
-        404: errorSchemas.notFound,
-      },
-    },
-  },
+        200: fileMetadataSchema,
+        403: z.object({ message: z.string() }),
+        404: z.object({ message: z.string() })
+      }
+    }
+  }
 };
 
+// Helper to build URLs
 export function buildUrl(path: string, params?: Record<string, string | number>): string {
   let url = path;
   if (params) {

@@ -1,70 +1,100 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --font-outfit: 'Outfit', sans-serif;
+  --font-mono: 'Fira Code', monospace;
+  --font-sans: 'Inter', sans-serif;
 
-  /* Color Palette - HSL Space Separated */
-  /* Deep Slate Blue - Background #2C3E50 -> 210 29% 24% */
-  /* Darker variants for depth */
-  --background: 210 29% 24%; 
-  --foreground: 210 40% 98%;
-
-  /* Cards/Surfaces - Slightly lighter blue/grey with opacity for glassmorphism */
-  --card: 210 29% 30%;
-  --card-foreground: 210 40% 98%;
+  /* Dark Terminal Aesthetic */
+  --background: 0 0% 4%;
+  --foreground: 0 0% 90%; /* Light gray text */
   
-  --popover: 210 29% 30%;
-  --popover-foreground: 210 40% 98%;
-
-  /* Vibrant Orange - #FF5722 -> 14 100% 57% */
-  --primary: 14 100% 57%;
-  --primary-foreground: 0 0% 100%;
-
-  /* Muted tones for secondary text */
-  --secondary: 210 20% 40%;
-  --secondary-foreground: 210 40% 90%;
-
-  --muted: 210 20% 35%;
-  --muted-foreground: 210 20% 70%;
-
-  --accent: 14 100% 65%; /* Lighter orange for hover */
-  --accent-foreground: 0 0% 100%;
-
+  --primary: 142 71% 45%; /* Terminal Green */
+  --primary-foreground: 144 80% 5%;
+  
+  --secondary: 0 0% 12%;
+  --secondary-foreground: 0 0% 90%;
+  
+  --muted: 0 0% 12%;
+  --muted-foreground: 0 0% 45%;
+  
+  --accent: 217 91% 60%; /* Cyan accent for links/info */
+  --accent-foreground: 210 40% 98%;
+  
   --destructive: 0 84% 60%;
   --destructive-foreground: 210 40% 98%;
-
-  --border: 210 20% 40%;
-  --input: 210 20% 35%;
-  --ring: 14 100% 57%;
-
-  --radius: 0.75rem;
+  
+  --border: 0 0% 12%;
+  --input: 0 0% 12%;
+  --ring: 142 71% 45%; /* Green Focus Ring */
+  
+  --radius: 4px; /* Sharp corners for technical feel */
 }
 
 @layer base {
   body {
-    @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground;
-    font-family: var(--font-outfit);
+    @apply bg-background text-foreground font-mono antialiased;
+    font-feature-settings: "ss01", "ss02", "cv01", "cv02";
     background-image: 
-      radial-gradient(at 0% 0%, hsla(210, 29%, 35%, 0.3) 0px, transparent 50%),
-      radial-gradient(at 100% 100%, hsla(14, 100%, 57%, 0.1) 0px, transparent 50%);
-    background-attachment: fixed;
-  }
-
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-bold tracking-tight;
+      radial-gradient(rgba(34, 197, 94, 0.03) 1px, transparent 1px),
+      radial-gradient(rgba(34, 197, 94, 0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+    background-position: 0 0, 10px 10px;
   }
 }
 
-@layer utilities {
-  .glass-panel {
-    @apply bg-card/60 backdrop-blur-xl border border-white/10 shadow-xl;
-  }
-  
-  .glass-button {
-    @apply bg-white/5 hover:bg-white/10 border border-white/10 text-white backdrop-blur-sm transition-all duration-300;
-  }
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border: 2px solid hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground));
+}
+
+/* Selection */
+::selection {
+  background: hsl(var(--primary) / 0.3);
+  color: hsl(var(--primary));
+}
+
+/* Utilities */
+.text-glow {
+  text-shadow: 0 0 10px hsl(var(--primary) / 0.5);
+}
+
+.border-glow {
+  box-shadow: 0 0 10px -2px hsl(var(--primary) / 0.2);
+}
+
+.scanline {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    rgba(255, 255, 255, 0) 50%,
+    rgba(0, 0, 0, 0.05) 50%,
+    rgba(0, 0, 0, 0.05)
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.3;
 }

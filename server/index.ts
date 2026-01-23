@@ -1,15 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
-import cors from "cors";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 
 const app = express();
-app.use(cors({
-  origin: "*",
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "x-access-key"]
-}));
 const httpServer = createServer(app);
 
 declare module "http" {
@@ -27,23 +21,6 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
-
-// Strict Access Key check for /files paths (browser access)
-app.use((req, res, next) => {
-  if (req.path.startsWith("/files")) {
-    // If it's a direct file access with a key in query, skip this global check
-    // The specific route handler will handle 'key' verification
-    if (req.query.key) {
-      return next();
-    }
-    
-    const providedKey = req.headers["x-access-key"] || req.query.accessKey;
-    if (providedKey !== process.env.ACCESS_KEY) {
-      return res.status(401).send(""); // White screen
-    }
-  }
-  next();
-});
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -83,8 +60,6 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const { runMigrations } = await import("./db");
-  await runMigrations();
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {

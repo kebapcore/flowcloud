@@ -1,25 +1,31 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const files = pgTable("files", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  type: text("type").notNull(), // 'file' | 'folder'
-  parentId: integer("parent_id"), // null for root
-  path: text("path").notNull().default("/"), // Virtual path like /neck-hurt
-  size: text("size").notNull(),
-  accessKey: text("access_key"), // 20-character key for public access
-  createdAt: timestamp("created_at").defaultNow(),
+// Configuration Schemas
+export const keyConfigSchema = z.record(z.string(), z.string()); // { "filename": "accessKey" }
+
+export const allowedConfigSchema = z.object({
+  allowedHosts: z.array(z.string()),
+  devMode: z.boolean()
 });
 
-export const insertFileSchema = createInsertSchema(files).omit({ id: true, createdAt: true });
+export type KeyConfig = z.infer<typeof keyConfigSchema>;
+export type AllowedConfig = z.infer<typeof allowedConfigSchema>;
 
-export type File = typeof files.$inferSelect;
-export type InsertFile = z.infer<typeof insertFileSchema>;
+// API Response Schemas
+export const fileMetadataSchema = z.object({
+  id: z.number(),
+  name: z.string(),
+  type: z.literal("file"),
+  parentId: z.null(),
+  path: z.string(),
+  size: z.string(),
+  accessKey: z.string(),
+  createdAt: z.string()
+});
 
-export type CreateFileRequest = InsertFile;
-export type FileResponse = File;
+export type FileMetadata = z.infer<typeof fileMetadataSchema>;
 
-export type AuthRequest = { accessKey: string };
-export type AuthResponse = { success: boolean };
+// Minimal Zod schema for validation (if needed for API inputs)
+export const fileRequestSchema = z.object({
+  path: z.string()
+});

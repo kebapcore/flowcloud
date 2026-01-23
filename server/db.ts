@@ -1,32 +1,15 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
-import * as schema from "@shared/schema";
-import { migrate } from "drizzle-orm/node-postgres/migrator";
-import path from "path";
 
 const { Pool } = pg;
 
+// We are using a simple file-based approach as requested, but keeping this 
+// for compatibility with the stack's requirements if we need it later.
+// The prompt emphasized local JSON files for keys and config.
+
 if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+  console.warn("DATABASE_URL not set, DB features will be disabled.");
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle(pool, { schema });
-
-export async function runMigrations() {
-  console.log("Running migrations...");
-  try {
-    const { migrate } = await import("drizzle-orm/node-postgres/migrator");
-    const path = await import("path");
-    await migrate(db, { migrationsFolder: path.join(process.cwd(), "migrations") });
-    console.log("Migrations completed successfully");
-  } catch (err: any) {
-    if (err.code === '42P07') {
-      console.log("Migrations already applied (relation exists)");
-    } else {
-      console.error("Migration failed:", err);
-    }
-  }
-}
+export const pool = new Pool({ connectionString: process.env.DATABASE_URL || "postgres://localhost:5432/postgres" });
+export const db = drizzle(pool);

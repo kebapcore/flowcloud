@@ -1,8 +1,9 @@
 ## Packages
-framer-motion | Complex animations and page transitions
-lucide-react | Beautiful icons for the file manager
+framer-motion | Essential for terminal typing effects and smooth transitions
+lucide-react | Iconography for technical UI
 
 ## Notes
-Tailwind Config: Extended colors for 'slate-blue' and 'vibrant-orange'.
-Tailwind Config: Added 'Outfit' font family.
-Auth: Simple client-side auth state persisting to sessionStorage or just memory for this session, verified against backend API.
+- Most routes return 404 by design
+- /test is the only interactive interface
+- API requires 'x-access-key' header for file metadata
+- Raw file access uses URL query param '?key='
