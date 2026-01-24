@@ -1,82 +1,49 @@
 const crypto = require('crypto');
 
-// Modül seviyesinde origin'i saklamak için
-let _configuredOrigin = null;
-
 /**
  * FlowCloud Auth Helper
  * 
  * Bu modül, FlowCloud ile güvenli iletişim kurmak isteyen diğer sunucular için
- * gerekli olan doğrulama endpoint'ini otomatik olarak kurar.
+ * gerekli olan imzalama işlemlerini otomatik yapar.
  * 
  * Kullanım:
  * 1. Projenizin .env dosyasına SYSTEM_ACCESS_KEY ekleyin.
  * 2. Bu dosyayı projenize dahil edin.
- * 3. Express uygulamanıza şu şekilde entegre edin:
- * 
- *    const { setupFlowCloud } = require('./flowcloud-auth-helper');
- *    const app = express();
- *    setupFlowCloud(app, { origin: 'https://mysite.com' });
+ * 3. fetchFromFlowCloud fonksiyonunu kullanarak dosya çekin.
  */
-
-function setupFlowCloud(app, options = {}) {
-    const key = options.key || process.env.SYSTEM_ACCESS_KEY;
-    const path = options.path || '/flowcloud-auth';
-
-    // Origin'i belirle: Options > Env (RENDER_EXTERNAL_URL) > Env (BASE_URL)
-    _configuredOrigin = options.origin || process.env.RENDER_EXTERNAL_URL || process.env.BASE_URL;
-
-    if (!key) {
-        console.warn('\x1b[33m%s\x1b[0m', '⚠️ FlowCloud Warning: SYSTEM_ACCESS_KEY bulunamadı. Auth endpoint aktif değil.');
-        return;
-    }
-
-    if (!_configuredOrigin) {
-        console.warn('\x1b[33m%s\x1b[0m', '⚠️ FlowCloud Warning: Origin belirlenemedi. fetchFromFlowCloud kullanırken manuel belirtmeniz gerekebilir.');
-    }
-
-    // Endpoint'i kur
-    app.get(path, (req, res) => {
-        // Challenge artık Header'dan okunuyor (Query param yerine)
-        const challenge = req.headers['x-flowcloud-challenge'];
-
-        if (!challenge) {
-            return res.status(400).send('Challenge Required');
-        }
-
-        // HMAC SHA256 ile imzala
-        const hmac = crypto.createHmac('sha256', key);
-        hmac.update(challenge);
-        const signature = hmac.digest('hex');
-
-        res.send(signature);
-    });
-
-    console.log('\x1b[32m%s\x1b[0m', `✅ FlowCloud: Auth endpoint "${path}" başarıyla kuruldu.`);
-    if (_configuredOrigin) {
-        console.log('   Origin:', _configuredOrigin);
-    }
-}
 
 /**
  * FlowCloud'dan dosya çekmek için yardımcı fonksiyon
  * @param {string} flowCloudUrl - FlowCloud sunucu adresi (örn: https://flowcloud.onrender.com)
  * @param {string} filename - İstenen dosya adı
- * @param {string} [manualOrigin] - Opsiyonel. setupFlowCloud ile ayarlanmadıysa buradan verilebilir.
+ * @param {string} myOrigin - Kendi sunucu adresiniz (örn: https://mysite.com). Bu adres FlowCloud'da allowed.json içinde olmalıdır.
  * @returns {Promise<string>} - Dosya içeriği
  */
-async function fetchFromFlowCloud(flowCloudUrl, filename, manualOrigin) {
+async function fetchFromFlowCloud(flowCloudUrl, filename, myOrigin) {
     const targetUrl = `${flowCloudUrl}/api/proxy/files/${filename}`;
-    const myOrigin = manualOrigin || _configuredOrigin;
+    const key = process.env.SYSTEM_ACCESS_KEY;
+
+    if (!key) {
+        throw new Error('FlowCloud Error: SYSTEM_ACCESS_KEY bulunamadı. .env dosyanızı kontrol edin.');
+    }
 
     if (!myOrigin) {
-        throw new Error('FlowCloud Error: Origin belirlenemedi. setupFlowCloud içinde { origin: "..." } belirtin veya environment variable (RENDER_EXTERNAL_URL) kullanın.');
+        throw new Error('FlowCloud Error: "myOrigin" parametresi zorunludur. Kendi sunucu adresinizi belirtmelisiniz.');
     }
+
+    // İmza Oluşturma
+    const timestamp = Date.now().toString();
+    const payload = `${timestamp}:${filename}`;
+    const hmac = crypto.createHmac('sha256', key);
+    hmac.update(payload);
+    const signature = hmac.digest('hex');
 
     // Header ekle
     const headers = {
         'X-App-Request': '1',
-        'Origin': myOrigin
+        'Origin': myOrigin,
+        'x-flowcloud-date': timestamp,
+        'x-flowcloud-signature': signature
     };
 
     try {
@@ -94,6 +61,5 @@ async function fetchFromFlowCloud(flowCloudUrl, filename, manualOrigin) {
 }
 
 module.exports = {
-    setupFlowCloud,
     fetchFromFlowCloud
 };

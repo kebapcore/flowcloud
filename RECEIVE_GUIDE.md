@@ -14,58 +14,41 @@ Bu rehber, yetkili ikincil sunucuların (Secondary Servers) FlowCloud ana sunucu
 
 ## Kullanım
 
-### 1. Kimlik Doğrulama Kurulumu (Setup)
+### Dosya Çekme (Fetch)
 
-Sunucunuz başladığında, FlowCloud'un sizi doğrulayabilmesi için gerekli endpoint'i kurmalısınız.
-
-```javascript
-const express = require('express');
-const { setupFlowCloud } = require('./flowcloud-auth-helper');
-
-const app = express();
-
-// Otomatik Origin Algılama (RENDER_EXTERNAL_URL veya BASE_URL varsa)
-setupFlowCloud(app);
-
-// VEYA Manuel Origin Belirtme (Önerilen)
-// setupFlowCloud(app, { origin: 'https://mysite.com' });
-
-app.listen(3000);
-```
-
-### 2. Dosya Çekme (Fetch)
-
-Dosyaları okumak için `fetchFromFlowCloud` fonksiyonunu kullanın.
+Artık herhangi bir sunucu kurulumu (`setupFlowCloud`) yapmanıza gerek yoktur. Sadece `fetchFromFlowCloud` fonksiyonunu kullanarak dosyaları güvenle çekebilirsiniz.
 
 ```javascript
 const { fetchFromFlowCloud } = require('./flowcloud-auth-helper');
 
 async function dosyaOku() {
   try {
-    // Parametreler: (FlowCloud Adresi, Dosya Adı)
-    // Origin, setupFlowCloud'da ayarlandığı için burada tekrar vermeye gerek yok.
-    const icerik = await fetchFromFlowCloud('https://flowcloud.onrender.com', 'flowscript.txt');
+    // Parametreler: (FlowCloud Adresi, Dosya Adı, Sizin Adresiniz)
+    const icerik = await fetchFromFlowCloud(
+      'https://flowcloud.onrender.com', 
+      'flowscript.txt',
+      'https://mysite.com' // Origin (allowed.json'da olmalı)
+    );
     
     console.log("Dosya İçeriği:", icerik);
-    
-    // İsterseniz JSON parse edebilirsiniz (eğer dosya json ise)
-    // const data = JSON.parse(icerik);
     
   } catch (error) {
     console.error("Hata oluştu:", error.message);
     // Hata durumları:
     // 404: Dosya yok veya SYSTEM_ACCESS_KEY yanlış
-    // 403: Origin listede yok veya HMAC doğrulaması başarısız
+    // 403: Origin listede yok veya İmza geçersiz
   }
 }
 ```
 
 ## Güvenlik Mantığı (Nasıl Çalışır?)
 
-1.  Siz dosya istersiniz.
-2.  FlowCloud sunucusu, sizin sunucunuza geri döner (`GET /flowcloud-auth`) ve bir **Challenge** (rastgele sayı) gönderir.
-3.  Sizin sunucunuz (Helper sayesinde), bu sayıyı `SYSTEM_ACCESS_KEY` ile şifreleyip (HMAC) geri gönderir.
-4.  FlowCloud imzayı doğrular ve Origin'inizin izinli listede olup olmadığına bakar.
-5.  Her şey tamamsa dosya gönderilir.
+1.  **İmzalı İstek (Signed Request):** Helper fonksiyonu, isteği göndermeden önce `SYSTEM_ACCESS_KEY` kullanarak bir imza oluşturur.
+2.  **Header:** Bu imza (`x-flowcloud-signature`) ve zaman damgası (`x-flowcloud-date`) isteğin başlığına eklenir.
+3.  **Doğrulama:** FlowCloud sunucusu gelen imzayı kontrol eder.
+    *   İmza doğruysa (yani şifreyi biliyorsanız),
+    *   Zaman damgası yeniyse (5 dakika içinde),
+    *   Ve Origin'iniz izinli listedeyse...
+4.  **Sonuç:** Dosya gönderilir.
 
-**Not:** `SYSTEM_ACCESS_KEY` asla ağ üzerinden gönderilmez. Sadece imzalama işlemi için kullanılır.
+**Avantajı:** Sunucunuzun dışarıya açık bir endpoint (`/flowcloud-auth`) kurmasına gerek kalmaz. Şifre asla ağ üzerinden gönderilmez.

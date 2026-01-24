@@ -68,26 +68,6 @@ export async function registerRoutes(
     next();
   });
 
-  // Verification Endpoint (For other servers to verify us)
-  // Challenge-Response Protocol
-  app.get("/flowcloud-auth", (req, res) => {
-    if (!process.env.SYSTEM_ACCESS_KEY) {
-      return res.status(404).send("Not Configured");
-    }
-
-    const challenge = req.headers["x-flowcloud-challenge"] as string;
-    if (!challenge) {
-      return res.status(400).send("Challenge Required");
-    }
-
-    // Create HMAC SHA256 signature
-    const hmac = crypto.createHmac('sha256', process.env.SYSTEM_ACCESS_KEY);
-    hmac.update(challenge);
-    const signature = hmac.digest('hex');
-
-    res.send(signature);
-  });
-
   // Secure Proxy File Endpoint
   app.get("/api/proxy/files/:filename", async (req, res) => {
     const filename = req.params.filename;
@@ -111,44 +91,36 @@ export async function registerRoutes(
       return res.status(404).send("Not Found");
     }
 
-    // Security Check 4: Origin Verification (HMAC Challenge-Response)
-    try {
-      // 1. Generate a random challenge
-      const challenge = crypto.randomBytes(16).toString('hex');
+    // Security Check 4: Signed Request Verification
+    // Instead of callback, we verify the signature sent by the requester.
+    const signature = req.headers["x-flowcloud-signature"] as string;
+    const timestamp = req.headers["x-flowcloud-date"] as string;
 
-      // 2. Ask the Origin to sign this challenge
-      const verifyUrl = `${origin}/flowcloud-auth`;
+    if (!signature || !timestamp) {
+      return res.status(403).send("Forbidden: Signature Missing");
+    }
 
-      const verifyRes = await fetch(verifyUrl, {
-        headers: {
-          "x-flowcloud-challenge": challenge
-        }
-      });
+    // 4a. Verify Timestamp (Prevent Replay Attacks)
+    // Allow requests within 5 minutes window
+    const reqTime = parseInt(timestamp, 10);
+    const now = Date.now();
+    if (isNaN(reqTime) || Math.abs(now - reqTime) > 5 * 60 * 1000) {
+      return res.status(403).send("Forbidden: Request Expired");
+    }
 
-      if (!verifyRes.ok) {
-        console.log(`Verification failed for ${origin}: Status ${verifyRes.status}`);
-        return res.status(403).send("Forbidden: Verification Failed");
-      }
+    // 4b. Verify Signature
+    // Format: timestamp:filename
+    const payload = `${timestamp}:${filename}`;
+    const hmac = crypto.createHmac('sha256', process.env.SYSTEM_ACCESS_KEY);
+    hmac.update(payload);
+    const expectedSignature = hmac.digest('hex');
 
-      const remoteSignature = await verifyRes.text();
+    // Timing-safe comparison
+    const sigBuf = Buffer.from(signature, 'utf8');
+    const expectedBuf = Buffer.from(expectedSignature, 'utf8');
 
-      // 3. Calculate expected signature locally
-      const hmac = crypto.createHmac('sha256', process.env.SYSTEM_ACCESS_KEY);
-      hmac.update(challenge);
-      const expectedSignature = hmac.digest('hex');
-
-      // 4. Compare signatures (Timing-safe comparison)
-      const remoteBuf = Buffer.from(remoteSignature.trim(), 'utf8');
-      const expectedBuf = Buffer.from(expectedSignature, 'utf8');
-
-      if (remoteBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(remoteBuf, expectedBuf)) {
-        console.log(`Verification failed for ${origin}: Signature mismatch`);
-        return res.status(403).send("Forbidden: Invalid Signature");
-      }
-
-    } catch (err) {
-      console.error(`Verification error for ${origin}:`, err);
-      return res.status(403).send("Forbidden: Verification Error");
+    if (sigBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(sigBuf, expectedBuf)) {
+      return res.status(403).send("Forbidden: Invalid Signature");
     }
 
     // Explicitly prevent access to internal JSON files
