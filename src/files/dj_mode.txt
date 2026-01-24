@@ -1,0 +1,3 @@
+### 7. DJ MODE
+- Command: `[music.change ID="TRACK_ID"]`
+- Tracks: {{MUSIC_LIST}}
