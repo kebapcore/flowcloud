@@ -14,9 +14,9 @@ Bu rehber, yetkili ikincil sunucuların (Secondary Servers) FlowCloud ana sunucu
 
 ## Kullanım
 
-### Dosya Çekme (Fetch)
+### 2. Metin Dosyası Çekme (Text/JSON)
 
-Artık herhangi bir sunucu kurulumu (`setupFlowCloud`) yapmanıza gerek yoktur. Sadece `fetchFromFlowCloud` fonksiyonunu kullanarak dosyaları güvenle çekebilirsiniz.
+Dosyaları okumak için `fetchFromFlowCloud` fonksiyonunu kullanın.
 
 ```javascript
 const { fetchFromFlowCloud } = require('./flowcloud-auth-helper');
@@ -27,18 +27,52 @@ async function dosyaOku() {
     const icerik = await fetchFromFlowCloud(
       'https://flowcloud.onrender.com', 
       'flowscript.txt',
-      'https://mysite.com' // Origin (allowed.json'da olmalı)
+      'https://mysite.com'
     );
     
     console.log("Dosya İçeriği:", icerik);
     
   } catch (error) {
     console.error("Hata oluştu:", error.message);
-    // Hata durumları:
-    // 404: Dosya yok veya SYSTEM_ACCESS_KEY yanlış
-    // 403: Origin listede yok veya İmza geçersiz
   }
 }
+```
+
+### 3. Medya Streaming (MP3/Video)
+
+Büyük dosyaları veya medya dosyalarını stream etmek için `getSecureResponse` kullanın.
+
+```javascript
+const { getSecureResponse } = require('./flowcloud-auth-helper');
+const { Readable } = require('stream'); // Node.js Stream modülü
+
+app.get('/muzik-dinle', async (req, res) => {
+  try {
+    // Ham Response nesnesini al
+    const response = await getSecureResponse(
+      'https://flowcloud.onrender.com', 
+      'muzik.mp3',
+      'https://mysite.com'
+    );
+
+    // Headerları kopyala (Content-Type, Content-Length vb.)
+    res.setHeader('Content-Type', response.headers.get('content-type') || 'audio/mpeg');
+    if (response.headers.get('content-length')) {
+      res.setHeader('Content-Length', response.headers.get('content-length'));
+    }
+
+    // Stream'i pipe et (Node 18+ fetch body WebStream döner, Node Stream'e çeviriyoruz)
+    // Eğer node-fetch kullanıyorsanız response.body.pipe(res) yeterli olabilir.
+    if (response.body && typeof response.body.pipe === 'function') {
+        response.body.pipe(res);
+    } else {
+        Readable.fromWeb(response.body).pipe(res);
+    }
+
+  } catch (error) {
+    res.status(500).send("Hata: " + error.message);
+  }
+});
 ```
 
 ## Güvenlik Mantığı (Nasıl Çalışır?)

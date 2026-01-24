@@ -1,5 +1,8 @@
 const crypto = require('crypto');
 
+// Modül seviyesinde origin'i saklamak için
+let _configuredOrigin = null;
+
 /**
  * FlowCloud Auth Helper
  * 
@@ -13,15 +16,18 @@ const crypto = require('crypto');
  */
 
 /**
- * FlowCloud'dan dosya çekmek için yardımcı fonksiyon
- * @param {string} flowCloudUrl - FlowCloud sunucu adresi (örn: https://flowcloud.onrender.com)
+ * FlowCloud'dan güvenli bir şekilde dosya isteği yapar ve ham Response nesnesini döner.
+ * Stream (MP3, Video vb.) işlemleri için bunu kullanın.
+ * 
+ * @param {string} flowCloudUrl - FlowCloud sunucu adresi
  * @param {string} filename - İstenen dosya adı
- * @param {string} myOrigin - Kendi sunucu adresiniz (örn: https://mysite.com). Bu adres FlowCloud'da allowed.json içinde olmalıdır.
- * @returns {Promise<string>} - Dosya içeriği
+ * @param {string} [manualOrigin] - Opsiyonel origin
+ * @returns {Promise<Response>} - Fetch Response nesnesi
  */
-async function fetchFromFlowCloud(flowCloudUrl, filename, myOrigin) {
+async function getSecureResponse(flowCloudUrl, filename, manualOrigin) {
     const targetUrl = `${flowCloudUrl}/api/proxy/files/${filename}`;
     const key = process.env.SYSTEM_ACCESS_KEY;
+    const myOrigin = manualOrigin || _configuredOrigin || process.env.RENDER_EXTERNAL_URL || process.env.BASE_URL;
 
     if (!key) {
         throw new Error('FlowCloud Error: SYSTEM_ACCESS_KEY bulunamadı. .env dosyanızı kontrol edin.');
@@ -53,13 +59,26 @@ async function fetchFromFlowCloud(flowCloudUrl, filename, myOrigin) {
             throw new Error(`FlowCloud Error: ${response.status} ${response.statusText}`);
         }
 
-        return await response.text();
+        return response;
     } catch (error) {
         console.error('❌ FlowCloud Fetch Error:', error.message);
         throw error;
     }
 }
 
+/**
+ * FlowCloud'dan dosya çekmek için yardımcı fonksiyon (Metin dosyaları için)
+ * @param {string} flowCloudUrl - FlowCloud sunucu adresi (örn: https://flowcloud.onrender.com)
+ * @param {string} filename - İstenen dosya adı
+ * @param {string} myOrigin - Kendi sunucu adresiniz (örn: https://mysite.com). Bu adres FlowCloud'da allowed.json içinde olmalıdır.
+ * @returns {Promise<string>} - Dosya içeriği (Text)
+ */
+async function fetchFromFlowCloud(flowCloudUrl, filename, myOrigin) {
+    const response = await getSecureResponse(flowCloudUrl, filename, myOrigin);
+    return await response.text();
+}
+
 module.exports = {
-    fetchFromFlowCloud
+    fetchFromFlowCloud,
+    getSecureResponse
 };
