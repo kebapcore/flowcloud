@@ -29,19 +29,19 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  
+
   // CORS and Access Control Middleware
   app.use((req, res, next) => {
     const config = getAllowedConfig();
     const origin = req.headers.origin;
 
     // Allow /test, API routes, and file routes. 404 the rest (including root)
-    const isAllowedPath = 
-      req.path === "/test" || 
-      req.path.startsWith("/api/") || 
+    const isAllowedPath =
+      req.path === "/test" ||
+      req.path.startsWith("/api/") ||
       // Essential static assets for the frontend to function
-      req.path.startsWith("/@") || 
-      req.path.startsWith("/src/") || 
+      req.path.startsWith("/@") ||
+      req.path.startsWith("/src/") ||
       req.path.startsWith("/node_modules/") ||
       req.path.endsWith(".js") ||
       req.path.endsWith(".css") ||
@@ -51,7 +51,7 @@ export async function registerRoutes(
     if (!isAllowedPath) {
       return res.status(404).send("Not Found");
     }
-    
+
     if (req.path === "/test" && !config.devMode) {
       return res.status(404).send("Not Found");
     }
@@ -75,11 +75,19 @@ export async function registerRoutes(
 
     // Security Check 1: Origin (if present)
     if (origin && !config.allowedHosts.includes(origin)) {
-       return res.status(404).send("Not Found");
+      return res.status(404).send("Not Found");
     }
 
     // Security Check 2: X-App-Request Header
     if (appRequestHeader !== "1") {
+      return res.status(404).send("Not Found");
+    }
+
+    // Security Check 3: SYSTEM_ACCESS_KEY (Server-side only)
+    // The server must be configured with a master key to allow proxying.
+    // This key is NOT sent by the frontend, it's just a server configuration check.
+    if (!process.env.SYSTEM_ACCESS_KEY) {
+      // If the server is not configured correctly, deny access (act as if file not found)
       return res.status(404).send("Not Found");
     }
 
@@ -96,7 +104,7 @@ export async function registerRoutes(
     // Path traversal protection
     const decodedPath = decodeURIComponent(safeFilename);
     const safePath = decodedPath.replace(/\.\./g, ''); // Simple protection
-    
+
     const diskPath = path.join(FILES_DIR, safePath);
 
     if (!fs.existsSync(diskPath)) {
