@@ -2,6 +2,7 @@ import type { Express } from "express";
 import type { Server } from "http";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 
 // Configuration paths
 const ROOT_DIR = process.cwd();
@@ -29,19 +30,20 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-
+  
   // CORS and Access Control Middleware
   app.use((req, res, next) => {
     const config = getAllowedConfig();
     const origin = req.headers.origin;
 
     // Allow /test, API routes, and file routes. 404 the rest (including root)
-    const isAllowedPath =
-      req.path === "/test" ||
-      req.path.startsWith("/api/") ||
+    const isAllowedPath = 
+      req.path === "/test" || 
+      req.path.startsWith("/api/") || 
+      req.path.startsWith("/flowcloud-auth") ||
       // Essential static assets for the frontend to function
-      req.path.startsWith("/@") ||
-      req.path.startsWith("/src/") ||
+      req.path.startsWith("/@") || 
+      req.path.startsWith("/src/") || 
       req.path.startsWith("/node_modules/") ||
       req.path.endsWith(".js") ||
       req.path.endsWith(".css") ||
@@ -51,7 +53,7 @@ export async function registerRoutes(
     if (!isAllowedPath) {
       return res.status(404).send("Not Found");
     }
-
+    
     if (req.path === "/test" && !config.devMode) {
       return res.status(404).send("Not Found");
     }
@@ -67,13 +69,23 @@ export async function registerRoutes(
   });
 
   // Verification Endpoint (For other servers to verify us)
+  // Challenge-Response Protocol
   app.get("/flowcloud-auth", (req, res) => {
-    // Only return the key if it exists
     if (!process.env.SYSTEM_ACCESS_KEY) {
       return res.status(404).send("Not Configured");
     }
-    // Return the key as plain text
-    res.send(process.env.SYSTEM_ACCESS_KEY);
+
+    const challenge = req.query.challenge as string;
+    if (!challenge) {
+      return res.status(400).send("Challenge Required");
+    }
+
+    // Create HMAC SHA256 signature
+    const hmac = crypto.createHmac('sha256', process.env.SYSTEM_ACCESS_KEY);
+    hmac.update(challenge);
+    const signature = hmac.digest('hex');
+
+    res.send(signature);
   });
 
   // Secure Proxy File Endpoint
@@ -85,7 +97,7 @@ export async function registerRoutes(
 
     // Security Check 1: Origin (if present)
     if (origin && !config.allowedHosts.includes(origin)) {
-      return res.status(404).send("Not Found");
+       // If origin is not in allowed list, we proceed to verification
     }
 
     // Security Check 2: X-App-Request Header
@@ -98,30 +110,40 @@ export async function registerRoutes(
       return res.status(404).send("Not Found");
     }
 
-    // Security Check 4: Origin Verification (Server-to-Server)
-    // We ask the Origin server: "Do you have the SYSTEM_ACCESS_KEY?"
+    // Security Check 4: Origin Verification (HMAC Challenge-Response)
     if (!origin) {
-      // If no origin (e.g. direct curl), we cannot verify, so we deny.
       return res.status(403).send("Forbidden: No Origin");
     }
 
     try {
-      // Construct the verification URL
-      // Assuming the Origin implements /flowcloud-auth
-      const verifyUrl = `${origin}/flowcloud-auth`;
+      // 1. Generate a random challenge
+      const challenge = crypto.randomBytes(16).toString('hex');
 
+      // 2. Ask the Origin to sign this challenge
+      const verifyUrl = `${origin}/flowcloud-auth?challenge=${challenge}`;
+      
       const verifyRes = await fetch(verifyUrl);
       if (!verifyRes.ok) {
         console.log(`Verification failed for ${origin}: Status ${verifyRes.status}`);
         return res.status(403).send("Forbidden: Verification Failed");
       }
 
-      const remoteKey = await verifyRes.text();
-      // Trim whitespace just in case
-      if (remoteKey.trim() !== process.env.SYSTEM_ACCESS_KEY) {
-        console.log(`Verification failed for ${origin}: Key mismatch`);
-        return res.status(403).send("Forbidden: Invalid Verification Key");
+      const remoteSignature = await verifyRes.text();
+
+      // 3. Calculate expected signature locally
+      const hmac = crypto.createHmac('sha256', process.env.SYSTEM_ACCESS_KEY);
+      hmac.update(challenge);
+      const expectedSignature = hmac.digest('hex');
+
+      // 4. Compare signatures (Timing-safe comparison)
+      const remoteBuf = Buffer.from(remoteSignature.trim(), 'utf8');
+      const expectedBuf = Buffer.from(expectedSignature, 'utf8');
+
+      if (remoteBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(remoteBuf, expectedBuf)) {
+        console.log(`Verification failed for ${origin}: Signature mismatch`);
+        return res.status(403).send("Forbidden: Invalid Signature");
       }
+
     } catch (err) {
       console.error(`Verification error for ${origin}:`, err);
       return res.status(403).send("Forbidden: Verification Error");
@@ -140,7 +162,7 @@ export async function registerRoutes(
     // Path traversal protection
     const decodedPath = decodeURIComponent(safeFilename);
     const safePath = decodedPath.replace(/\.\./g, ''); // Simple protection
-
+    
     const diskPath = path.join(FILES_DIR, safePath);
 
     if (!fs.existsSync(diskPath)) {
@@ -152,4 +174,3 @@ export async function registerRoutes(
 
   return httpServer;
 }
-
