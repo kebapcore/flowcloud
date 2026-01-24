@@ -61,7 +61,7 @@ export async function registerRoutes(
     // CORS logic
     if (origin && config.allowedHosts.includes(origin)) {
       res.header("Access-Control-Allow-Origin", origin);
-      res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, X-App-Request");
+      res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, X-App-Request, x-flowcloud-challenge");
       res.header("Access-Control-Allow-Credentials", "false"); // Credentials closed as requested
     }
 
@@ -95,9 +95,10 @@ export async function registerRoutes(
     const appRequestHeader = req.headers["x-app-request"];
     const config = getAllowedConfig();
 
-    // Security Check 1: Origin (if present)
-    if (origin && !config.allowedHosts.includes(origin)) {
-      // If origin is not in allowed list, we proceed to verification
+    // Security Check 1: Origin (Strict Check)
+    // The origin MUST be in the allowed.json list.
+    if (!origin || !config.allowedHosts.includes(origin)) {
+      return res.status(403).send("Forbidden: Origin not allowed");
     }
 
     // Security Check 2: X-App-Request Header
@@ -111,10 +112,6 @@ export async function registerRoutes(
     }
 
     // Security Check 4: Origin Verification (HMAC Challenge-Response)
-    if (!origin) {
-      return res.status(403).send("Forbidden: No Origin");
-    }
-
     try {
       // 1. Generate a random challenge
       const challenge = crypto.randomBytes(16).toString('hex');
