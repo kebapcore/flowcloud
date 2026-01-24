@@ -59,9 +59,10 @@ export async function registerRoutes(
     }
 
     // CORS logic
-    if (origin && config.allowedHosts.includes(origin)) {
-      res.header("Access-Control-Allow-Origin", origin);
-      res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, X-App-Request, x-flowcloud-challenge");
+    // If devMode is on, allow all origins. Otherwise check allowedHosts.
+    if (config.devMode || (origin && config.allowedHosts.includes(origin))) {
+      res.header("Access-Control-Allow-Origin", origin || "*");
+      res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, X-App-Request, x-flowcloud-challenge, x-flowcloud-signature, x-flowcloud-date");
       res.header("Access-Control-Allow-Credentials", "false"); // Credentials closed as requested
     }
 
@@ -76,8 +77,8 @@ export async function registerRoutes(
     const config = getAllowedConfig();
 
     // Security Check 1: Origin (Strict Check)
-    // The origin MUST be in the allowed.json list.
-    if (!origin || !config.allowedHosts.includes(origin)) {
+    // The origin MUST be in the allowed.json list OR devMode must be enabled.
+    if (!config.devMode && (!origin || !config.allowedHosts.includes(origin))) {
       return res.status(403).send("Forbidden: Origin not allowed");
     }
 
