@@ -1,0 +1,7 @@
+{
+  "tasks": {
+    "build": "deno run -A script/deno_build.ts"
+  },
+  "nodeModulesDir": "auto",
+  "importMap": "import_map.json"
+}

@@ -1,0 +1,2 @@
+### 6. ROUTINE MANAGEMENT
+- Used for daily schedules. Use the JSON format defined in Phase 2.
