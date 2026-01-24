@@ -30,20 +30,20 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  
+
   // CORS and Access Control Middleware
   app.use((req, res, next) => {
     const config = getAllowedConfig();
     const origin = req.headers.origin;
 
     // Allow /test, API routes, and file routes. 404 the rest (including root)
-    const isAllowedPath = 
-      req.path === "/test" || 
-      req.path.startsWith("/api/") || 
+    const isAllowedPath =
+      req.path === "/test" ||
+      req.path.startsWith("/api/") ||
       req.path.startsWith("/flowcloud-auth") ||
       // Essential static assets for the frontend to function
-      req.path.startsWith("/@") || 
-      req.path.startsWith("/src/") || 
+      req.path.startsWith("/@") ||
+      req.path.startsWith("/src/") ||
       req.path.startsWith("/node_modules/") ||
       req.path.endsWith(".js") ||
       req.path.endsWith(".css") ||
@@ -53,7 +53,7 @@ export async function registerRoutes(
     if (!isAllowedPath) {
       return res.status(404).send("Not Found");
     }
-    
+
     if (req.path === "/test" && !config.devMode) {
       return res.status(404).send("Not Found");
     }
@@ -75,7 +75,7 @@ export async function registerRoutes(
       return res.status(404).send("Not Configured");
     }
 
-    const challenge = req.query.challenge as string;
+    const challenge = req.headers["x-flowcloud-challenge"] as string;
     if (!challenge) {
       return res.status(400).send("Challenge Required");
     }
@@ -97,7 +97,7 @@ export async function registerRoutes(
 
     // Security Check 1: Origin (if present)
     if (origin && !config.allowedHosts.includes(origin)) {
-       // If origin is not in allowed list, we proceed to verification
+      // If origin is not in allowed list, we proceed to verification
     }
 
     // Security Check 2: X-App-Request Header
@@ -120,9 +120,14 @@ export async function registerRoutes(
       const challenge = crypto.randomBytes(16).toString('hex');
 
       // 2. Ask the Origin to sign this challenge
-      const verifyUrl = `${origin}/flowcloud-auth?challenge=${challenge}`;
-      
-      const verifyRes = await fetch(verifyUrl);
+      const verifyUrl = `${origin}/flowcloud-auth`;
+
+      const verifyRes = await fetch(verifyUrl, {
+        headers: {
+          "x-flowcloud-challenge": challenge
+        }
+      });
+
       if (!verifyRes.ok) {
         console.log(`Verification failed for ${origin}: Status ${verifyRes.status}`);
         return res.status(403).send("Forbidden: Verification Failed");
@@ -162,7 +167,7 @@ export async function registerRoutes(
     // Path traversal protection
     const decodedPath = decodeURIComponent(safeFilename);
     const safePath = decodedPath.replace(/\.\./g, ''); // Simple protection
-    
+
     const diskPath = path.join(FILES_DIR, safePath);
 
     if (!fs.existsSync(diskPath)) {
