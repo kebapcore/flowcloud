@@ -1,4 +1,4 @@
 {
-  "allowedHosts": ["https://flowcloud.replit.app"],
-  "devMode": true
+  "allowedHosts": ["https://flowstate.onrender.com"],
+  "devMode": false
 }
