@@ -66,6 +66,16 @@ export async function registerRoutes(
     next();
   });
 
+  // Verification Endpoint (For other servers to verify us)
+  app.get("/flowcloud-auth", (req, res) => {
+    // Only return the key if it exists
+    if (!process.env.SYSTEM_ACCESS_KEY) {
+      return res.status(404).send("Not Configured");
+    }
+    // Return the key as plain text
+    res.send(process.env.SYSTEM_ACCESS_KEY);
+  });
+
   // Secure Proxy File Endpoint
   app.get("/api/proxy/files/:filename", async (req, res) => {
     const filename = req.params.filename;
@@ -84,11 +94,37 @@ export async function registerRoutes(
     }
 
     // Security Check 3: SYSTEM_ACCESS_KEY (Server-side only)
-    // The server must be configured with a master key to allow proxying.
-    // This key is NOT sent by the frontend, it's just a server configuration check.
     if (!process.env.SYSTEM_ACCESS_KEY) {
-      // If the server is not configured correctly, deny access (act as if file not found)
       return res.status(404).send("Not Found");
+    }
+
+    // Security Check 4: Origin Verification (Server-to-Server)
+    // We ask the Origin server: "Do you have the SYSTEM_ACCESS_KEY?"
+    if (!origin) {
+      // If no origin (e.g. direct curl), we cannot verify, so we deny.
+      return res.status(403).send("Forbidden: No Origin");
+    }
+
+    try {
+      // Construct the verification URL
+      // Assuming the Origin implements /flowcloud-auth
+      const verifyUrl = `${origin}/flowcloud-auth`;
+
+      const verifyRes = await fetch(verifyUrl);
+      if (!verifyRes.ok) {
+        console.log(`Verification failed for ${origin}: Status ${verifyRes.status}`);
+        return res.status(403).send("Forbidden: Verification Failed");
+      }
+
+      const remoteKey = await verifyRes.text();
+      // Trim whitespace just in case
+      if (remoteKey.trim() !== process.env.SYSTEM_ACCESS_KEY) {
+        console.log(`Verification failed for ${origin}: Key mismatch`);
+        return res.status(403).send("Forbidden: Invalid Verification Key");
+      }
+    } catch (err) {
+      console.error(`Verification error for ${origin}:`, err);
+      return res.status(403).send("Forbidden: Verification Error");
     }
 
     // Explicitly prevent access to internal JSON files
