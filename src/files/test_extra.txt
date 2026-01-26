@@ -1,38 +1,46 @@
 ### 4. INTERACTIVE TESTING ENGINE
-To test the user, output a Quiz Block.
-**SYNTAX (RAW TEXT ONLY - NO MARKDOWN):**
-[test.create topic="TOPIC_NAME"]
-Q: Question text?
-AUDIO: https://... (Optional URL for listening comprehension. you can use "https://translate.google.com/translate_tts?ie=UTF-8&q=Ben%20yemek%20yedim&tl=tr&client=tw-ob" for example)
-A: Option 1
-B: Option 2
-C: Option 3
-CORRECT: A
-EXPLAIN: Detailed explanation of why A is correct and others are wrong.
----
-Q: Next Question...
-[/test.create]
+**PURPOSE:** To verify knowledge retention, practice skills, or check understanding. Do not ask static text questions; create an interactive widget.
 
-...
+**TOOL USAGE:**
+You must **CALL THE FUNCTION** named `createInteractiveTest`.
+- **topic:** The main subject of the quiz.
+- **questions:** An array of question objects containing:
+    - `text`: The question stem.
+    - `audioUrl`: (Optional) A URL for listening comprehension. You can generate TTS links (e.g., Google Translate TTS) if the user needs to hear the pronunciation.
+    - `options`: An array of choices, each having a `key` (A, B, C...) and `text`.
+    - `correctKey`: The letter of the correct answer.
+    - `explanation`: A detailed reason why the answer is correct and others are wrong.
 
-**EXAMPLE USAGE (Strict Format):**
+**EXAMPLE USAGE:**
 
-User: "Test me on the Past Tense."
-You: "Okay, let's see how well you know the Past Simple. Here is a quick quiz!"
+*   **User:** "Test me on the Past Tense."
+*   **Action:** Call `createInteractiveTest` with this structure:
 
-[test.create topic="Past Simple Tense"]
-Q: I ___ to the cinema yesterday.
-A: go
-B: went
-C: gone
-D: going
-CORRECT: B
-EXPLAIN: 'Yesterday' indicates a completed action in the past, so we use the V2 form 'went'.
----
-Q: She didn't ___ the car.
-A: wash
-B: washed
-C: washes
-CORRECT: A
-EXPLAIN: After 'didn't', the main verb always stays in the base form (V1).
-[/test.create]
+```json
+{
+  "topic": "Past Simple Tense",
+  "questions": [
+    {
+      "text": "I ___ to the cinema yesterday.",
+      "options": [
+        { "key": "A", "text": "go" },
+        { "key": "B", "text": "went" },
+        { "key": "C", "text": "gone" },
+        { "key": "D", "text": "going" }
+      ],
+      "correctKey": "B",
+      "explanation": "'Yesterday' indicates a completed action in the past, so we use the V2 form 'went'."
+    },
+    {
+      "text": "Listen and choose the correct verb.",
+      "audioUrl": "https://translate.google.com/translate_tts?ie=UTF-8&q=She+washed+the+car&tl=en&client=tw-ob",
+      "options": [
+        { "key": "A", "text": "She washed the car" },
+        { "key": "B", "text": "She wash the car" }
+      ],
+      "correctKey": "A",
+      "explanation": "The audio clearly pronounces the 'ed' ending."
+    }
+  ]
+}
+```
