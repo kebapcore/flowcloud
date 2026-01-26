@@ -1,0 +1,86 @@
+[
+  {
+    "id": "main",
+    "name": "Just Monika - Dan Salvato",
+    "description": "Moments alone with Monika in the pure void. An intense atmosphere where you lose track of your emotions. Perfect for starting new projects or creation; like the beginning of the universe.",
+    "url": "cloud://main.mp3",
+    "mood": "surreal"
+  },
+  {
+    "id": "home",
+    "name": "Home - Toby Fox",
+    "description": "Study, write your script, and focus. A peaceful track that truly feels like home.",
+    "url": "cloud://home.mp3",
+    "mood": "calm"
+  },
+  {
+    "id": "tooclose",
+    "name": "Too Close (Home) - Toby Fox",
+    "description": "Angelic English vocals blended with Spanish. It is the sound of summer turned into music. Romantic, nostalgic, and full of 'love nwamatti' vibes.",
+    "url": "cloud://tctome.mp3",
+    "mood": "summer"
+  },
+  {
+    "id": "MOOG_CITY",
+    "name": "Moog City - C418",
+    "description": "Creativity, nostalgia, and first steps. The iconic Minecraft track that encourages exploration and building new worlds.",
+    "url": "cloud://moog.mp3",
+    "mood": "creative"
+  },
+  {
+    "id": "REUNITED",
+    "name": "Reunited - Toby Fox",
+    "description": "Peace, nostalgia, and a touch of cyberpunk. Great for coffee breaks or diving into the deeper parts of a project. A calm and deep melody by Toby Fox.",
+    "url": "cloud://reunited.mp3",
+    "mood": "serenity"
+  },
+  {
+    "id": "MINIGAME",
+    "name": "Aurea Cosmica (Instrumental, Minigame Version)",
+    "description": "A deep track blending Cyberpunk, 8-bit, and Phonk. Long, slow, eerie, and cosmic. Ideal for deep work, scriptwriting, or overthinking.",
+    "url": "cloud://minigame.mp3",
+    "mood": "cyberpunk"
+  },
+  {
+    "id": "LFY_LORI",
+    "name": "Love For You - LOVELY LORI",
+    "description": "A hypnotic journey through a pink world of love and romance. Perfect background music for writing romantic comedies.",
+    "url": "cloud://lfy.mp3",
+    "mood": "romantic"
+  },
+  {
+    "id": "CUPID_KPOP",
+    "name": "Cupid - FIFTY FIFTY",
+    "description": "A viral K-pop masterpiece with a dreamy, retro-pop aesthetic. It captures the sweet feeling of a hopeless romantic in a bubblegum-pop world.",
+    "url": "cloud://cupid.mp3",
+    "mood": "romantic"
+  },
+  {
+    "id": "FINALE",
+    "name": "Finale - Toby Fox",
+    "description": "A triumphant and high-energy orchestral piece that represents the ultimate push toward victory. Filled with hope and soaring determination.",
+    "url": "cloud://finale.mp3",
+    "mood": "determination"
+  },
+  {
+    "id": "Memory",
+    "name": "Memory - Toby Fox",
+    "description": "'Despite everything, it's still you.' A touching, slow, and melancholic melody that might make you cry or simply smile at the memories made.",
+    "url": "cloud://memory.mp3",
+    "mood": "nostalgic"
+  },
+  {
+    "id": "Memory2",
+    "name": "His Theme - Toby Fox",
+    "description": "A deeper and more intense evolution of 'Memory'. It doesn't just make you sad; it gives you the strength to stand back up after you've cried.",
+    "url": "cloud://histheme.mp3",
+    "mood": "determination"
+  },
+  {
+    "id": "mettaton",
+    "name": "Death By Glamour - Toby Fox",
+    "description": "Mettaton is at the peak! High BPM flow with zero breaks. Dive deep into the flow state and get your energy levels to the maximum.",
+    "url": "cloud://mettaton.mp3",
+    "mood": "energetic"
+  }
+]
