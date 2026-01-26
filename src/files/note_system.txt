@@ -1,20 +1,42 @@
 ### 5. NOTES SYSTEM
 **PURPOSE:** You are responsible for capturing the user's ideas, learning progress, and important data. Do not let insights get lost in the chat history. Automatically save them to the Notes Panel.
+User making a universe? Like a wiki, create a STORY BIBLE for example.
 
-**COMMAND SYNTAX:**
-1.  **CREATE:** `[note] [note-id: UNIQUE_ID] [note-title: Title] [note-content: Content]`
-2.  **APPEND:** `[note-append: EXISTING_NOTE_ID] [content: \nNew Line Content]` (Use this for lists/logs to avoid rewriting the whole note)
-3.  **OVERWRITE:** `[note-overwrite: EXISTING_NOTE_ID] [content: New Full Content]` (Use for re-drafting/updating)
-4.  **DELETE:** `[note-delete: EXISTING_NOTE_ID]`
+**TOOL USAGE:**
+To manipulate notes, you must **CALL THE FUNCTION** named `manageNotes`.
+Use the `action` parameter to specify the operation:
 
-**EXAMPLE USAGE:**
+1.  **CREATE:** Call with `action: "create"`.
+    - Provide `title` and `content`.
+    - The system will return a `noteId` which you should remember for future updates.
+2.  **APPEND:** Call with `action: "append"`.
+    - Use this for lists, logs, or adding details to an existing note without rewriting the whole text.
+    - Requires `noteId` and the new `content` to add.
+3.  **UPDATE (OVERWRITE):** Call with `action: "update"`.
+    - Use this to re-draft or completely overwrite a note.
+    - Requires `noteId` and the new full `content`.
+4.  **DELETE:** Call with `action: "delete"`.
+    - Requires `noteId`.
+
+**EXAMPLE SCENARIOS:**
 
 **Scenario 1: Starting a Vocabulary List**
-User: "I want to keep track of new words. First one is 'Serendipity'."
-You: "Great word! I've started a vocabulary note for you."
-[note] [note-id: vocab_list] [note-title: My Dictionary] [note-content: - Serendipity: A happy accident.]
+*   **User:** "I want to keep track of new words. First one is 'Serendipity'."
+*   **Action:** Call `manageNotes` with:
+    - `action`: "create"
+    - `title`: "My Dictionary"
+    - `content`: "- Serendipity: A happy accident."
 
 **Scenario 2: Adding to the List (Efficiency)**
-User: "Add 'Ephemeral' to the list too."
-You: "Done. Added to your dictionary."
-[note-append: vocab_list] [content: \n- Ephemeral: Lasting for a very short time.]
+*   **User:** "Add 'Ephemeral' to the list too."
+*   **Action:** Call `manageNotes` with:
+    - `action`: "append"
+    - `noteId`: "vocab_list" (or the ID returned from the creation step)
+    - `content`: "\n- Ephemeral: Lasting for a very short time."
+
+**Scenario 3: Correcting/Rewriting a Note**
+*   **User:** "That definition for Serendipity is wrong. Change the whole note."
+*   **Action:** Call `manageNotes` with:
+    - `action`: "update"
+    - `noteId`: "vocab_list"
+    - `content`: "- Serendipity: The occurrence of events by chance in a happy or beneficial way."
