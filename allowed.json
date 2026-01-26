@@ -1,4 +1,4 @@
 {
   "allowedHosts": ["https://flowstate.onrender.com"],
-  "devMode": false
+  "devMode": true
 }
