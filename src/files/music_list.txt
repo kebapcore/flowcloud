@@ -24,7 +24,7 @@
     "id": "MOOG_CITY",
     "name": "Moog City - C418",
     "description": "Creativity, nostalgia, and first steps. The iconic Minecraft track that encourages exploration and building new worlds.",
-    "url": "cloud://moog.mp3",
+    "url": "cloud://Fuji_IV_-_Moog_City_(mp3.pm).mp3",
     "mood": "creative"
   },
   {
